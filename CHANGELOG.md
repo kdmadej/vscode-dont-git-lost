@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.6] - 2026-06-01
+
+### Fixed
+- Typed characters no longer briefly appear at the end of the blame annotation
+- Blame annotation no longer flickers while typing (clears immediately on edit, re-appears 500ms after typing stops)
+
+### Added
+- Uncommitted lines now show `You, just now` (or `You, 2 minutes ago`, etc.) instead of no annotation
+
 ## [0.1.5] - 2026-05-28
 
 ### Fixed

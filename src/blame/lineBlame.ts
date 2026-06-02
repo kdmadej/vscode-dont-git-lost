@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
-import { formatAnnotation } from './annotation';
+import { formatAnnotation, formatAgo } from './annotation';
 import type { BlameCache } from '../git/blameCache';
 import type { RepoLocator } from '../git/repoLocator';
 import { readConfig } from '../config';
 
 const DEBOUNCE_MS = 100;
+const TYPING_IDLE_MS = 500;
 
 export class LineBlame implements vscode.Disposable {
   private decoration = vscode.window.createTextEditorDecorationType({
@@ -16,6 +17,9 @@ export class LineBlame implements vscode.Disposable {
     rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
   });
   private timer: NodeJS.Timeout | undefined;
+  private typingTimer: NodeJS.Timeout | undefined;
+  private isTyping = false;
+  private editTimes = new Map<string, number>();
   private subscriptions: vscode.Disposable[] = [];
 
   constructor(
@@ -23,9 +27,32 @@ export class LineBlame implements vscode.Disposable {
     private repoLocator: RepoLocator,
   ) {
     this.subscriptions.push(
-      vscode.window.onDidChangeTextEditorSelection((e) => this.schedule(e.textEditor)),
-      vscode.window.onDidChangeActiveTextEditor((editor) => editor && this.schedule(editor)),
+      vscode.window.onDidChangeTextEditorSelection((e) => {
+        if (!this.isTyping) this.schedule(e.textEditor);
+      }),
+      vscode.window.onDidChangeActiveTextEditor((editor) => {
+        this.isTyping = false;
+        if (this.typingTimer) { clearTimeout(this.typingTimer); this.typingTimer = undefined; }
+        if (editor) this.schedule(editor);
+      }),
       vscode.workspace.onDidChangeConfiguration(() => this.refreshActive()),
+      vscode.workspace.onDidCloseTextDocument((doc) => this.editTimes.delete(doc.uri.toString())),
+      vscode.workspace.onDidChangeTextDocument((e) => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor || e.document !== editor.document) return;
+        const match = this.repoLocator.locate(e.document.uri);
+        if (match) this.blameCache.invalidate(match.relPath);
+        this.isTyping = true;
+        this.editTimes.set(e.document.uri.toString(), Date.now());
+        editor.setDecorations(this.decoration, []);
+        if (this.timer) { clearTimeout(this.timer); this.timer = undefined; }
+        if (this.typingTimer) clearTimeout(this.typingTimer);
+        this.typingTimer = setTimeout(() => {
+          this.isTyping = false;
+          this.typingTimer = undefined;
+          void this.update(editor);
+        }, TYPING_IDLE_MS);
+      }),
     );
   }
 
@@ -58,8 +85,18 @@ export class LineBlame implements vscode.Disposable {
     try {
       const blame = await this.blameCache.get(match.relPath, match.headSha);
       const entry = blame.find((b) => b.lineNumber === line);
-      if (!entry || entry.isUncommitted) {
+      if (!entry) {
         editor.setDecorations(this.decoration, []);
+        return;
+      }
+      if (entry.isUncommitted) {
+        const editMs = this.editTimes.get(editor.document.uri.toString());
+        const suffix = editMs !== undefined ? `, ${formatAgo(Math.floor(editMs / 1000), Date.now())}` : '';
+        const range = editor.document.lineAt(line).range;
+        editor.setDecorations(this.decoration, [{
+          range,
+          renderOptions: { after: { contentText: `You${suffix}` } },
+        }]);
         return;
       }
       const text = formatAnnotation(
@@ -83,5 +120,6 @@ export class LineBlame implements vscode.Disposable {
     this.decoration.dispose();
     this.subscriptions.forEach((d) => d.dispose());
     if (this.timer) clearTimeout(this.timer);
+    if (this.typingTimer) clearTimeout(this.typingTimer);
   }
 }
