@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0] - 2026-08-28
+
+### Changed
+- **Don't Git Lost is now 100% free.** No license keys, no paid tiers, no feature gating, nothing to buy — now or later.
+- Removed the license popup and the `Enter License Key`, `Buy License` and `Remove License Key` commands.
+- Removed the shared `lucasprag.licenseKeys` setting.
+
+### Added
+- `Don't Git Lost: Leave a Review` command.
+- A prompt asking for a marketplace review after 14 days of use. It is a non-modal notification, appears at most three times, and stops permanently once you rate or dismiss it.
+
 ## [0.1.6] - 2026-06-01
 
 ### Fixed
