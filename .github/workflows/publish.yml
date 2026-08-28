@@ -9,13 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: git clone https://github.com/lucasprag/vscode-license.git ../vscode-license
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - run: npm ci && npm run build
-        working-directory: ../vscode-license
       - run: npm ci
       - run: npm test
       - uses: HaaLeo/publish-vscode-extension@v2

@@ -13,3 +13,4 @@ tsconfig.json
 **/*.map
 **/*.ts
 !dist/**/*.js
+package-lock.json
