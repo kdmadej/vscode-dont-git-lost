@@ -7,6 +7,7 @@ import { resolveHost } from '../host/hostResolver';
 import { createHostClient } from '../host/hostClientFactory';
 import type { AuthBroker } from '../auth/authBroker';
 import { readConfig } from '../config';
+import { shouldProvideBlameHover } from './hoverTrigger';
 
 export class DontGitLostHoverProvider implements vscode.HoverProvider {
   constructor(
@@ -22,7 +23,7 @@ export class DontGitLostHoverProvider implements vscode.HoverProvider {
     const line = document.lineAt(position.line);
     const eol = line.range.end.character;
     const { hoverTrigger } = readConfig();
-    if (hoverTrigger === 'annotation' && position.character < eol) {
+    if (!shouldProvideBlameHover(hoverTrigger, position.character, eol)) {
       return undefined;
     }
 

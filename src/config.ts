@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
+import { HoverTrigger } from './hover/hoverTrigger';
 
 export interface SelfHostedEntry {
   type: 'github' | 'gitlab' | 'bitbucket';
   baseUrl: string;
   webBaseUrl?: string;
 }
-
-type HoverTrigger = 'annotation' | 'line';
 
 export interface DontGitLostConfig {
   blameEnabled: boolean;
