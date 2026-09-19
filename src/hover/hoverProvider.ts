@@ -14,10 +14,18 @@ export class DontGitLostHoverProvider implements vscode.HoverProvider {
     private blameCache: BlameCache,
     private repoLocator: RepoLocator,
     private auth: AuthBroker,
-  ) {}
+  ) { }
 
   async provideHover(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Hover | undefined> {
     if (document.uri.scheme !== 'file') return undefined;
+
+    const line = document.lineAt(position.line);
+    const eol = line.range.end.character;
+    const { hoverTrigger } = readConfig();
+    if (hoverTrigger === 'annotation' && position.character < eol) {
+      return undefined;
+    }
+
     const match = this.repoLocator.locate(document.uri);
     if (!match || !match.headSha) return undefined;
 
@@ -76,7 +84,12 @@ export class DontGitLostHoverProvider implements vscode.HoverProvider {
     md.isTrusted = true;
     md.supportThemeIcons = true;
     md.supportHtml = true;
-    const range = document.lineAt(position.line).range;
+    const range = hoverTrigger === 'annotation' ? new vscode.Range(
+      position.line,
+      Math.max(0, eol),
+      position.line,
+      eol,
+    ) : document.lineAt(position.line).range;
     return new vscode.Hover(md, range);
   }
 }
